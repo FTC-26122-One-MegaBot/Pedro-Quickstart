@@ -35,6 +35,7 @@ public class Main extends LinearOpMode {
     double fy = 400;
     double cx = 640 / 2.0; // = 320
     double cy = 480 / 2.0; // = 240
+    double rx;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -45,11 +46,12 @@ public class Main extends LinearOpMode {
         leftBack = hardwareMap.get(DcMotor.class, "leftRear");
         rightBack = hardwareMap.get(DcMotor.class, "rightRear");
         Shoot = hardwareMap.get(Servo.class, "Shoot");
-        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightFront.setDirection(DcMotorSimple.Direction.FORWARD);
         rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftBack.setDirection(DcMotorSimple.Direction.FORWARD);
+
         FlyWheel.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
 
         AprilTagProcessor tagProcessor = new AprilTagProcessor.Builder()
                 .setLensIntrinsics(fx, fy, cx, cy)
@@ -68,7 +70,8 @@ public class Main extends LinearOpMode {
 
         waitForStart();
         if (opModeIsActive()) {
-            while (opModeIsActive()){
+            while (opModeIsActive() && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
+
                 deltaTime = runtime.seconds() - lastTime;
                 lastTime = runtime.seconds();
                 Drive();
@@ -85,7 +88,7 @@ public class Main extends LinearOpMode {
     private void Drive() {
         double y = -gamepad1.left_stick_y; // Remember, Y stick value is reversed
         double x = gamepad1.left_stick_x * 1.1; // Counteract imperfect strafing
-        double rx = gamepad1.right_stick_x;
+        rx = gamepad1.right_stick_x;
 
         double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
         double frontLeftPower = (y + x + rx) / denominator;
@@ -134,17 +137,24 @@ public class Main extends LinearOpMode {
         }
 
     }
-    private void AutoAim(AprilTagProcessor tagProcessor){
-        AprilTagDetection tag = tagProcessor.getDetections().iterator().next();
-        if (gamepad1.right_stick_button){
-            if (tag.ftcPose.bearing >= Math.abs(1)){
-               double draaisnelheid = tag.ftcPose.bearing / Math.abs(tag.ftcPose.bearing) * 0.5;
-               rightBack.setPower(draaisnelheid);
-               rightFront.setPower(draaisnelheid);
-               leftFront.setPower(-draaisnelheid);
-               leftBack.setPower(-draaisnelheid);
+    private void AutoAim(AprilTagProcessor tagProcessor) {
+        // Controleer eerst of er ten minste één tag is gedetecteerd
+        if (!tagProcessor.getDetections().isEmpty()) {
+            AprilTagDetection tag = tagProcessor.getDetections().iterator().next();
+
+            // Alleen auto-aim als je op de rechter stick-knop drukt
+            if (gamepad1.right_stick_button) {
+                if (Math.abs(tag.ftcPose.bearing) >= 4) {
+                    double draaisnelheid = Math.signum(tag.ftcPose.bearing) * 0.3;
+
+                    rightBack.setPower(draaisnelheid);
+                    rightFront.setPower(draaisnelheid);
+                    leftFront.setPower(-draaisnelheid);
+                    leftBack.setPower(-draaisnelheid);
+                }
             }
         }
+
     }
     private void Telemetry(AprilTagProcessor tagProcessor) {
         if (!tagProcessor.getDetections().isEmpty()) {
@@ -156,6 +166,7 @@ public class Main extends LinearOpMode {
                 telemetry.addData("tot-distance", tag.ftcPose.range);
                 telemetry.addData("yaw", tag.ftcPose.yaw);
                 telemetry.addData("pitch", tag.ftcPose.pitch);
+                telemetry.addData("bearing", tag.ftcPose.bearing);
                 telemetry.addData("ID", tag.id);
                 if (tag.id == 21){
                     telemetry.addData("Patern","🟩🟪🟪");
@@ -171,6 +182,7 @@ public class Main extends LinearOpMode {
         }
         telemetry.addData("flywheel-target-velocity", FlywheelSpeed);
         telemetry.addData("flywheel-speed", FlyWheel.getVelocity());
+        telemetry.addData("turn-factor", rx);
         telemetry.update();
     }
 

@@ -45,18 +45,28 @@ public class VisionTest extends LinearOpMode {
         if (opModeIsActive()){
 
             while (opModeIsActive()){
+
                 if (!tagProcessor.getDetections().isEmpty()) {
                     AprilTagDetection tag = tagProcessor.getDetections().iterator().next();
+                    try {
+                        telemetry.addData("x-distance", tag.ftcPose.x);
+                        telemetry.addData("y-distance", tag.ftcPose.y);
+                        telemetry.addData("z-distance", tag.ftcPose.z);
+                        telemetry.addData("tot-distance", tag.ftcPose.range);
+                        telemetry.addData("yaw", tag.ftcPose.yaw);
+                        telemetry.addData("pitch", tag.ftcPose.pitch);
+                        telemetry.addData("ID", tag.id);
+                        if (tag.id == 21) {
+                            telemetry.addData("Patern", "🟩🟪🟪");
+                        } else if (tag.id == 22) {
+                            telemetry.addData("Patern", "🟪🟩🟪");
+                        } else if (tag.id == 23) {
+                            telemetry.addData("Patern", "🟪🟪🟩");
 
-                    telemetry.addData("exposure", exposure.isExposureSupported());
-                    telemetry.addData("x-distance", tag.ftcPose.x);
-                    telemetry.addData("y-distance", tag.ftcPose.y);
-                    telemetry.addData("z-distance", tag.ftcPose.z);
-                    telemetry.addData("tot-distance", tag.ftcPose.range);
-                    telemetry.addData("bearing", tag.ftcPose.bearing);
-                    telemetry.addData("yaw", tag.ftcPose.yaw);
-                    telemetry.addData("pitch", tag.ftcPose.pitch);
-                    telemetry.addData("ID", tag.id);
+                        }
+                    }catch (NullPointerException e) {
+                        // Foo
+                    }
                     telemetry.update();
                 }
             }

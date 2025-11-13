@@ -64,7 +64,7 @@ public class prototypetest extends LinearOpMode {
             speed -= 10;
         }
         else if (gamepad1.dpad_right) {
-            speed -= 10;
+            speed += 10;
         }
         else if (gamepad1.triangle){
             speed = 0;
