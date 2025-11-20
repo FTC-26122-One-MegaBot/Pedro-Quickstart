@@ -77,7 +77,7 @@ public class Main extends LinearOpMode {
                 Drive();
                 FlyWheel();
                 Shoot();
-//                Intake();
+                Intake();
                 AutoAim(tagProcessor);
                 Telemetry(tagProcessor);
             }
@@ -120,15 +120,15 @@ public class Main extends LinearOpMode {
             FlywheelSpeed -= 280 * deltaTime;
         }
     }
-//    private void Intake() {
-//        if (gamepad1.x){
-//            Intake.setPower(0.4);
-//        } else if (gamepad1.circle){
-//            Intake.setPower(-0.4);
-//        } else {
-//            Intake.setPower(0);
-//        }
-//    }
+    private void Intake() {
+        if (gamepad1.x){
+            Intake.setPower(0.8);
+        } else if (gamepad1.circle){
+            Intake.setPower(-0.8);
+        } else {
+            Intake.setPower(0);
+        }
+    }
     private void Shoot(){
         if (gamepad1.square){
             Shoot.setPosition(1.4);
@@ -144,13 +144,13 @@ public class Main extends LinearOpMode {
 
             // Alleen auto-aim als je op de rechter stick-knop drukt
             if (gamepad1.right_stick_button) {
-                if (Math.abs(tag.ftcPose.bearing) >= 4) {
-                    double draaisnelheid = Math.signum(tag.ftcPose.bearing) * 0.3;
+                if (Math.abs(tag.ftcPose.bearing) >= 2) {
+                    double draaisnelheid = (tag.ftcPose.bearing) * 0.2;
 
-                    rightBack.setPower(draaisnelheid);
-                    rightFront.setPower(draaisnelheid);
-                    leftFront.setPower(-draaisnelheid);
-                    leftBack.setPower(-draaisnelheid);
+                        rightBack.setPower(draaisnelheid);
+                        rightFront.setPower(draaisnelheid);
+                        leftFront.setPower(-draaisnelheid);
+                        leftBack.setPower(-draaisnelheid);
                 }
             }
         }
