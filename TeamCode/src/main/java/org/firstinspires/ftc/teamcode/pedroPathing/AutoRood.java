@@ -6,14 +6,14 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-@Autonomous(name = "Auto Blauw")
-public class AutoBlauw extends OpMode {
+@Autonomous(name = "Auto Rood")
+public class AutoRood extends OpMode {
     private DcMotor Intake;
     private CRServo Shoot;
     private DcMotorEx kanonl;
@@ -24,14 +24,14 @@ public class AutoBlauw extends OpMode {
     private Timer pathTimer, actionTimer, opmodeTimer;
 
     private int pathState;
-    private final Pose startPose = new Pose(48, 135, Math.toRadians(180)); // Start Pose of our robot.
-    private final Pose scorePose = new Pose(48, 96, Math.toRadians(135)); // Scoring Pose of our robot. It is facing the goal at a 135 degree angle.
-    private final Pose prePickup1 = new Pose(48, 84, Math.toRadians(0));
-    private final Pose Pickup1 = new Pose(18, 84, Math.toRadians(0));
-    private final Pose prePickup2 = new Pose(48, 60, Math.toRadians(0));
-    private final Pose Pickup2 = new Pose(18, 60, Math.toRadians(0));
-    private final Pose prePickup3 = new Pose(48, 36, Math.toRadians(0));
-    private final Pose Pickup3 = new Pose(18, 36, Math.toRadians(0));
+    private final Pose startPose = new Pose(111, 135, Math.toRadians(90)); // Start Pose of our robot.
+    private final Pose scorePose = new Pose(104, 110, Math.toRadians(55)); // Scoring Pose of our robot. It is facing the goal at a 135 degree angle.
+    private final Pose prePickup1 = new Pose(92, 85, Math.toRadians(180));
+    private final Pose Pickup1 = new Pose(115, 85, Math.toRadians(180));
+    private final Pose prePickup2 = new Pose(96, 60, Math.toRadians(180));
+    private final Pose Pickup2 = new Pose(126, 60, Math.toRadians(180));
+    private final Pose prePickup3 = new Pose(96, 36, Math.toRadians(180));
+    private final Pose Pickup3 = new Pose(126, 36, Math.toRadians(180));
 
     //    private Path scorePreload;
     private PathChain scorePreload, drivePickup1, grabPickup1, scorePickup1, drivePickup2, grabPickup2, scorePickup2, drivePickup3, grabPickup3, scorePickup3;
@@ -92,21 +92,29 @@ public class AutoBlauw extends OpMode {
         switch (pathState) {
             case 0:
                 follower.followPath(scorePreload, 1, true);
-                if (!follower.isBusy()) {
-                    Shoot.setPower(-1);
-                    Sleep(500L);
-                    Shoot.setPower(0);
                     setPathState(1);
-                }
+
                 break;
             case 1:
 
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
                 if (!follower.isBusy()) {
                     /* Score Preload */
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    Intake.setPower(0.8);
+                    Shoot.setPower(-1);
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(drivePickup1, 1, false);
+//                    follower.followPath(drivePickup1, 1, false);
                     setPathState(2);
                 }
                 break;
@@ -116,7 +124,9 @@ public class AutoBlauw extends OpMode {
                     /* Grab Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(grabPickup1, false);
+                    follower.followPath(drivePickup1, false);
+                    Intake.setPower(0.8);
+                    Shoot.setPower(0);
                     setPathState(3);
                 }
                 break;
@@ -126,13 +136,10 @@ public class AutoBlauw extends OpMode {
                     /* Score Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(scorePickup1, true);
-                    if (!follower.isBusy()) {
-                        Shoot.setPower(-1);
-                        Sleep(500L);
-                        Shoot.setPower(0);
-                        setPathState(4);
-                    }
+                    follower.followPath(grabPickup1, true);
+                    Intake.setPower(0);
+                    Shoot.setPower(0);
+                    setPathState(4);
                 }
                 break;
             case 4:
@@ -141,7 +148,19 @@ public class AutoBlauw extends OpMode {
                     /* Grab Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(drivePickup2, false);
+                    follower.followPath(scorePickup1, false);
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    Intake.setPower(0.8);
+                    Shoot.setPower(-1);
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                     setPathState(5);
                 }
                 break;
@@ -151,7 +170,7 @@ public class AutoBlauw extends OpMode {
                     /* Score Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup2, false);
+                    follower.followPath(drivePickup1, false);
                     setPathState(6);
                 }
                 break;
@@ -161,13 +180,9 @@ public class AutoBlauw extends OpMode {
                     /* Grab Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(scorePickup2, true);
-                    if (!follower.isBusy()) {
-                        Shoot.setPower(-1);
-                        Sleep(500L);
-                        Shoot.setPower(0);
-                        setPathState(7);
-                    }
+                    follower.followPath(grabPickup1, true);
+                    setPathState(-1);
+
                 }
                 break;
             case 7:
@@ -225,10 +240,8 @@ public class AutoBlauw extends OpMode {
      **/
     @Override
     public void loop() {
-        kanonl.setVelocity(2450 * 28 / 60);
-        kanonr.setVelocity(2450 * 28 / 60);
-        Intake.setPower(0.8);
-
+        kanonl.setVelocity(2350 * 28 / 60);
+        kanonr.setVelocity(2350 * 28 / 60);
         // These loop the movements of the robot, these must be called continuously in order to work
         follower.update();
         autonomousPathUpdate();

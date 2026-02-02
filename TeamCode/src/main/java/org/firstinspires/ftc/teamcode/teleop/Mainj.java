@@ -2,8 +2,10 @@ package org.firstinspires.ftc.teamcode.teleop;
 
 import android.util.Size;
 
+import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -11,13 +13,15 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 
-@TeleOp(name = "Main")
-public class Main extends LinearOpMode {
+@TeleOp(name = "Mainj")
+public class Mainj extends LinearOpMode {
     private ElapsedTime runtime = new ElapsedTime();
     private double lastTime = 0;
     private double deltaTime = 0;
@@ -25,33 +29,46 @@ public class Main extends LinearOpMode {
     private DcMotor leftFront;
     private DcMotor leftBack;
     private DcMotor rightBack;
-    private DcMotorEx FlyWheel;
+    private DcMotorEx kanonl;
+    private DcMotorEx kanonr;
+    float speed = 0;
+    public double integralsum = 0;
+    double kp = 0.04;
+    double ki = 0;
+    double kd = 0;
+    double preverror = 0;
     private DcMotor Intake;
-    private Servo Shoot;
-    double driveFast = 1.0;
+    private CRServo Shoot;
+    double driveSlow = 0.5;
     double driveSpeed;
-    double FlywheelSpeed = 0;
-    double fx = 400;
-    double fy = 400;
+    double fx = 400 * (140/34.0) ;
+    double fy = 400 * (140/34.0);
     double cx = 640 / 2.0; // = 320
     double cy = 480 / 2.0; // = 240
     double rx;
+    ElapsedTime timer = new ElapsedTime();
+    SparkFunOTOS otos;
 
     @Override
     public void runOpMode() throws InterruptedException {
-        FlyWheel = hardwareMap.get(DcMotorEx.class, "Flywheel");
         Intake = hardwareMap.get(DcMotor.class, "Intake");
         rightFront = hardwareMap.get(DcMotor.class, "rightFront");
         leftFront = hardwareMap.get(DcMotor.class, "leftFront");
         leftBack = hardwareMap.get(DcMotor.class, "leftRear");
         rightBack = hardwareMap.get(DcMotor.class, "rightRear");
-        Shoot = hardwareMap.get(Servo.class, "Shoot");
-        rightFront.setDirection(DcMotorSimple.Direction.FORWARD);
-        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftBack.setDirection(DcMotorSimple.Direction.FORWARD);
+        Shoot = hardwareMap.get(CRServo.class, "Shoot");
+        kanonl = hardwareMap.get(DcMotorEx.class, "Flywheell");
+        otos = hardwareMap.get(SparkFunOTOS.class, "sensor_otos");
+        kanonl.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER); //BELANGRIJK
+        kanonl.setDirection(DcMotorSimple.Direction.REVERSE);
+        kanonr = hardwareMap.get(DcMotorEx.class, "Flywheelr");
+        kanonr.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER); //BELANGRIJK
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightBack.setDirection(DcMotorSimple.Direction.FORWARD);
+        leftFront.setDirection(DcMotorSimple.Direction.FORWARD);
+        leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
+        Intake.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        FlyWheel.setDirection(DcMotorSimple.Direction.REVERSE);
 
         AprilTagProcessor tagProcessor = new AprilTagProcessor.Builder()
                 .setLensIntrinsics(fx, fy, cx, cy)
@@ -68,16 +85,23 @@ public class Main extends LinearOpMode {
                 .setCameraResolution(new Size(640, 480))
                 .build();
 
+        otos.begin();
+        otos.setAngularUnit(AngleUnit.DEGREES);
+        otos.setLinearUnit(DistanceUnit.CM);
+        otos.calibrateImu();
+        otos.setLinearScalar(1.13);
+        otos.resetTracking();
+
+
         waitForStart();
         if (opModeIsActive()) {
             while (opModeIsActive() && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
-
+                telemetry.addData("Resolution", visionPortal.getCameraState());
                 deltaTime = runtime.seconds() - lastTime;
                 lastTime = runtime.seconds();
                 Drive();
-                FlyWheel();
-                Shoot();
                 Intake();
+                flywheels();
                 AutoAim(tagProcessor);
                 Telemetry(tagProcessor);
             }
@@ -97,9 +121,9 @@ public class Main extends LinearOpMode {
         double backRightPower = (y + x - rx) / denominator;
 
         if (gamepad1.right_bumper) {
-            driveSpeed = driveFast;
+            driveSpeed = driveSlow;
         } else {
-            driveSpeed = 0.5;
+            driveSpeed = 1.0;
         }
 
         leftFront.setPower(frontLeftPower * driveSpeed);
@@ -108,35 +132,65 @@ public class Main extends LinearOpMode {
         rightBack.setPower(backRightPower * driveSpeed);
 
     }
-    private void FlyWheel() {
-        if (gamepad1.right_trigger > 0.1){
-            FlyWheel.setVelocity(FlywheelSpeed);
-        } else {
-            FlyWheel.setPower(0);
+    public double getpidspeed(double target,double state){
+        double error = target - state;
+        integralsum += error * timer.seconds();
+        double derivative = (error - preverror) / timer.seconds();
+        timer.reset();
+        preverror = error;
+        return (kp * error) + (ki * integralsum) + (kd * derivative) + target;
+
+    }
+    public void flywheels(){
+        if (gamepad1.left_trigger > 0.1){
+            Shoot.setPower(-1);
+        } else if (gamepad1.left_bumper){
+            Shoot.setPower(1);
+        } else{
+            Shoot.setPower(0);
         }
-        if (gamepad1.dpad_up){
-            FlywheelSpeed += 280 * deltaTime;
-        } else if (gamepad1.dpad_down){
-            FlywheelSpeed -= 280 * deltaTime;
+        if (gamepad1.dpad_up || gamepad2.dpad_up){
+            speed += 0.1;
+        } else if (gamepad1.dpad_down || gamepad2.dpad_down){
+            speed -= 0.1;
+        } else if (gamepad2.right_trigger > 0.1){
+            speed += 1;
+        } else if (gamepad2.right_bumper){
+            speed -= 1;
+        } else if (gamepad2.left_trigger > 0.1){
+            speed += 10;
+        } else if (gamepad2.left_bumper){
+            speed -= 10;
+        }
+        else if (gamepad1.dpad_left || gamepad2.dpad_left){
+            speed = 2900 * 28 / 60; //snelheid van kleine driehoek
+        }
+        else if (gamepad1.dpad_right || gamepad2.dpad_right){
+            speed = 2500 * 28 / 60 ; //snelheid van grote driehoek
+        }
+
+        if (gamepad1.cross || gamepad2.cross) {
+            speed = 0;
+        }
+        if (gamepad1.circle || gamepad2.circle){
+            speed = 1000;
+        }
+        else {
+            kanonl.setVelocity(getpidspeed(speed, kanonl.getVelocity()));
+            kanonr.setVelocity(getpidspeed(speed, kanonr.getVelocity()));
         }
     }
+
     private void Intake() {
-        if (gamepad1.x){
+        if (gamepad1.triangle){
             Intake.setPower(0.8);
-        } else if (gamepad1.circle){
+        } else if (gamepad1.square){
             Intake.setPower(-0.8);
         } else {
             Intake.setPower(0);
         }
     }
-    private void Shoot(){
-        if (gamepad1.square){
-            Shoot.setPosition(1.4);
-        } else if (gamepad1.triangle){
-            Shoot.setPosition(0.5);
-        }
 
-    }
     private void AutoAim(AprilTagProcessor tagProcessor) {
         // Controleer eerst of er ten minste één tag is gedetecteerd
         if (!tagProcessor.getDetections().isEmpty()) {
@@ -145,12 +199,12 @@ public class Main extends LinearOpMode {
             // Alleen auto-aim als je op de rechter stick-knop drukt
             if (gamepad1.right_stick_button) {
                 if (Math.abs(tag.ftcPose.bearing) >= 2) {
-                    double draaisnelheid = (tag.ftcPose.bearing) * 0.2;
+                    double draaisnelheid = (tag.ftcPose.bearing) * -0.02;
 
-                        rightBack.setPower(draaisnelheid);
-                        rightFront.setPower(draaisnelheid);
-                        leftFront.setPower(-draaisnelheid);
-                        leftBack.setPower(-draaisnelheid);
+                        rightBack.setPower(-draaisnelheid);
+                        rightFront.setPower(-draaisnelheid);
+                        leftFront.setPower(draaisnelheid);
+                        leftBack.setPower(draaisnelheid);
                 }
             }
         }
@@ -160,6 +214,7 @@ public class Main extends LinearOpMode {
         if (!tagProcessor.getDetections().isEmpty()) {
             AprilTagDetection tag = tagProcessor.getDetections().iterator().next();
             try {
+
                 telemetry.addData("x-distance", tag.ftcPose.x);
                 telemetry.addData("y-distance", tag.ftcPose.y);
                 telemetry.addData("z-distance", tag.ftcPose.z);
@@ -180,9 +235,15 @@ public class Main extends LinearOpMode {
                 // Foo
             }
         }
-        telemetry.addData("flywheel-target-velocity", FlywheelSpeed);
-        telemetry.addData("flywheel-speed", FlyWheel.getVelocity());
+        telemetry.addData("rpm-flywheel", speed / 28 * 60); //reken ticks om naar rpm
+        telemetry.addData("ticks-flywheel", speed);
+        telemetry.addData("kanonleftticks", kanonl.getVelocity());
+        telemetry.addData("kanonrightticks", kanonr.getVelocity());
         telemetry.addData("turn-factor", rx);
+        telemetry.addData("otos-x", otos.getPosition().x);
+        telemetry.addData("otos-y", otos.getPosition().y);
+        telemetry.addData("otos-h", otos.getPosition().h);
+
         telemetry.update();
     }
 

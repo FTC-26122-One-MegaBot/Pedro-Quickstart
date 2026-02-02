@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
-@TeleOp(name = "Schiettest")
+//TeleOp(name = "Schiettest")
 public class SchietTest extends LinearOpMode {
     private DcMotor arm;
     private CRServo passthrough1;
