@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -28,6 +29,7 @@ public class controls3a extends LinearOpMode {
     private DcMotorEx Flywheel;
     private DcMotorEx Revolver;
     private DcMotorEx turretencoder;
+    private CRServo turretturner;
     float speed = 0;
     public double integralsum = 0;
     double kp = 0.04;
@@ -43,9 +45,18 @@ public class controls3a extends LinearOpMode {
     double cx = 640 / 2.0; // = 320
     double cy = 480 / 2.0; // = 240
     boolean revoval = true;
+    boolean vierkantwasingedrukt = false;
+    boolean vierkantisingedrukt = false;
     double rx;
     int target;
+
+    int Revolverpos = 0;
+    int Revolverslot = 0;
+    boolean squarepressed;
+    boolean trianglepressed;
     ElapsedTime timer = new ElapsedTime();
+    double Startpositierevolver = Revolver.getCurrentPosition();
+
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -57,6 +68,7 @@ public class controls3a extends LinearOpMode {
         Shoot = hardwareMap.get(CRServo.class, "Shoot");
         Flywheel = hardwareMap.get(DcMotorEx.class, "Flywheel");
         Flywheel.setDirection(DcMotorSimple.Direction.FORWARD);
+        turretturner = hardwareMap.get(CRServo.class, "Turret");
         Revolver = hardwareMap.get(DcMotorEx.class, "Revolver");
         Revolver.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER); //BELANGRIJK
         turretencoder = hardwareMap.get(DcMotorEx.class, "turretencoder");
@@ -65,16 +77,34 @@ public class controls3a extends LinearOpMode {
         leftFront.setDirection(DcMotorSimple.Direction.FORWARD);
         leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
         Intake.setDirection(DcMotorSimple.Direction.REVERSE);
-
+        Revolver.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         Revolver.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        Revolver.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+//        Revolver.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+
+
+        AprilTagProcessor tagProcessor = new AprilTagProcessor.Builder()
+                .setLensIntrinsics(fx, fy, cx, cy)
+                .setDrawAxes(true)
+                .setDrawCubeProjection(true)
+                .setDrawTagID(true)
+                .setDrawTagOutline(true)
+                .setTagFamily(AprilTagProcessor.TagFamily.TAG_36h11)
+                .build();
+
+        VisionPortal visionPortal = new VisionPortal.Builder()
+                .addProcessor(tagProcessor)
+                .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
+                .setCameraResolution(new Size(640, 480))
+                .build();
 
 
 
         waitForStart();
         if (opModeIsActive()) {
             while (opModeIsActive()){
-
+                Revolver.setPower(0.4);
+                Revolver.setTargetPosition(Revolverpos);
                 deltaTime = runtime.seconds() - lastTime;
                 lastTime = runtime.seconds();
                 Drive();
@@ -82,6 +112,8 @@ public class controls3a extends LinearOpMode {
                 revolve();
                 shoot();
                 flywheel();
+                aim();
+                AutoAim(tagProcessor);
                 Telemetry();
             }
         }
@@ -111,8 +143,77 @@ public class controls3a extends LinearOpMode {
         rightBack.setPower(backRightPower * driveSpeed);
 
     }
-    public void revolve(){
-        if (revoval){
+    private void aim(){
+        if (gamepad2.left_bumper){
+            turretturner.setPower(1);
+        } else if (gamepad2.right_bumper){
+            turretturner.setPower(-1);
+        } else{
+            turretturner.setPower(0);
+        }
+    };
+    private void AutoAim(AprilTagProcessor tagProcessor) {
+        // Controleer eerst of er ten minste één tag is gedetecteerd
+        if (!tagProcessor.getDetections().isEmpty()) {
+            AprilTagDetection tag = tagProcessor.getDetections().iterator().next();
+
+            // Alleen auto-aim als je op de rechter stick-knop drukt
+            if (gamepad2.right_stick_button) { // heb 'm nu op player 2 staan, lijkt me handiger? - ken
+                if (Math.abs(tag.ftcPose.bearing) >= 2) {
+                    double draaisnelheid = (tag.ftcPose.bearing) * -0.02; // constante moet nog worden getuned
+                    Revolver.setVelocity(draaisnelheid); // PID?
+;                   }
+                }
+            }
+        }
+
+        public void revolve(){
+//        if (gamepad2.x){       //de inputs moeten nog op player 2 gezet worden
+//            Revolver.setPower(0.4);
+//        } else if (gamepad2.circle) {
+//            if (Revolver.getCurrentPosition() - Startpositierevolver < 5440) { // 8190/3 plus minus 10
+//                Revolver.setPower(0.4);
+//            } else if (Revolver.getCurrentPosition() - Startpositierevolver > 5480) {
+//                Revolver.setPower(-0.4);
+//            }
+//        } else if (gamepad2.triangle) {
+//                if (Revolver.getCurrentPosition() - Startpositierevolver < -5440) {
+//                    Revolver.setPower(0.4);
+//                } else if (Revolver.getCurrentPosition() - Startpositierevolver > -5480) {
+//                    Revolver.setPower(-0.4);
+//                }
+//        } else if (gamepad2.square) {
+//            if (Revolver.getCurrentPosition() - Startpositierevolver < 20) {
+//                Revolver.setPower(0.4);
+//            } else if (Revolver.getCurrentPosition() - Startpositierevolver > - 20) {
+//                Revolver.setPower(-0.4);
+//            }
+//        }
+//        else if ((gamepad1.square && vierkantwasingedrukt) == false) {
+//            vierkantisingedrukt = true;
+//            vierkantwasingedrukt = true;
+//        }
+//        else if (vierkantwasingedrukt = true) {
+//
+//        }
+        if (!gamepad1.square){
+            squarepressed = false;
+            }
+        if (gamepad1.square && squarepressed == false) {
+            squarepressed = true;
+            Revolverslot = Revolverslot + 1;
+            Revolverpos = Revolverslot * 5460;
+        }
+        if (!gamepad1.triangle){
+            trianglepressed = false;
+            }
+        if (gamepad1.triangle && trianglepressed == false) {
+            trianglepressed = true;
+            Revolverslot = Revolverslot - 1;
+            Revolverpos = Revolverslot * 5460;
+            }
+
+        /*if (revoval){
             if (gamepad1.circle){
                 revoval = false;
                 target += (8192/3)*2;
@@ -130,7 +231,7 @@ public class controls3a extends LinearOpMode {
         }
         if (Math.abs(Revolver.getCurrentPosition() - target) < 50){
             Revolver.setPower(0);
-        }
+        }*/
     }
     public double getpidspeed(double target,double state){
         double error = target - state;
