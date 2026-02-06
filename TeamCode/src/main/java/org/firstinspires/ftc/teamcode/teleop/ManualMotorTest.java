@@ -30,7 +30,7 @@ public class ManualMotorTest extends LinearOpMode {
         rightBack = hardwareMap.get(DcMotor.class, "rightRear");
         rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         rightBack.setDirection(DcMotorSimple.Direction.FORWARD);
-        leftFront.setDirection(DcMotorSimple.Direction.FORWARD);
+        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
 
         waitForStart();

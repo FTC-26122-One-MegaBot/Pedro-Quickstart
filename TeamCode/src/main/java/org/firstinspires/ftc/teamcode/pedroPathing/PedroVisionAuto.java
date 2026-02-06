@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -26,7 +27,7 @@ public class PedroVisionAuto extends OpMode {
 
 
     private DcMotor Intake;
-    private CRServo Shoot;
+    private Servo Shoot;
     private DcMotorEx kanonl;
     private DcMotorEx kanonr;
     VisionPortal visionPortal;
@@ -145,7 +146,7 @@ public class PedroVisionAuto extends OpMode {
                                         .setLinearHeadingInterpolation(Currentpose.getHeading(), Math.toRadians(45))
                                         .build();
                                 follower.followPath(driveforward, 0.3,true);
-                            } else if (tag.ftcPose.x < -1){
+                            } else if (tag.ftcPose.z < -1){
 
                                 Pose Currentpose = new Pose(follower.getPose().getX(), follower.getPose().getY(), follower.getHeading());
                                 Pose Currentpose_plusX = new Pose(follower.getPose().getX()-0.5, follower.getPose().getY()+0.5, follower.getHeading());
@@ -154,7 +155,7 @@ public class PedroVisionAuto extends OpMode {
                                         .setLinearHeadingInterpolation(Currentpose.getHeading(), Math.toRadians(45))
                                         .build();
                                 follower.followPath(driveforward, 0.3,true);
-                            } else if (tag.ftcPose.x > 1){
+                            } else if (tag.ftcPose.z > 1){
 
                                 Pose Currentpose = new Pose(follower.getPose().getX(), follower.getPose().getY(), follower.getHeading());
                                 Pose Currentpose_plusX = new Pose(follower.getPose().getX()+0.5, follower.getPose().getY()-0.5, follower.getHeading());
@@ -325,14 +326,14 @@ public class PedroVisionAuto extends OpMode {
         Intake = hardwareMap.get(DcMotor.class, "Intake");
         Intake.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        Shoot = hardwareMap.get(CRServo.class, "Shoot");
+        Shoot = hardwareMap.get(Servo.class, "Shoot");
 
-        kanonl = hardwareMap.get(DcMotorEx.class, "Flywheell");
-        kanonl.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER); //BELANGRIJK
-        kanonl.setDirection(DcMotorSimple.Direction.REVERSE);
-
-        kanonr = hardwareMap.get(DcMotorEx.class, "Flywheelr");
-        kanonr.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER); //BELANGRIJK
+//        kanonl = hardwareMap.get(DcMotorEx.class, "Flywheell");
+//        kanonl.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER); //BELANGRIJK
+//        kanonl.setDirection(DcMotorSimple.Direction.REVERSE);
+//
+//        kanonr = hardwareMap.get(DcMotorEx.class, "Flywheelr");
+//        kanonr.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER); //BELANGRIJK
 
         pathState = 0;
         pathTimer = new Timer();
